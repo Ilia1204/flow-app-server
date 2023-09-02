@@ -7,10 +7,10 @@
 	"license": "UNLICENSED",
 	"scripts": {
 		"prebuild": "rimraf dist",
-		"build": "nest build",
+		"build": "nest build --output public",
 		"format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
 		"postinstall": "prisma generate",
-		"start": "nest start",
+		"start": "node dist/main",
 		"dev": "nest start --watch",
 		"debug": "nest start --debug --watch",
 		"prod": "node dist/main",
