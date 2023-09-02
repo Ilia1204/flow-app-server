@@ -51,6 +51,21 @@ export class LogActiveDayService {
 			})
 	}
 
+	async getAllSessionCount() {
+		const logs = await this.prisma.logActiveDay.findMany({
+			select: {
+				sessionCount: true
+			}
+		})
+
+		const totalSessionCount = logs.reduce(
+			(sum, log) => sum + log.sessionCount,
+			0
+		)
+
+		return totalSessionCount
+	}
+
 	async getStatistics(userId: number) {
 		return this.prisma
 			.$queryRaw`SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'Month') AS month,

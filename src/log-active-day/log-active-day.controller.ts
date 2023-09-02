@@ -7,8 +7,8 @@ import {
 	UsePipes,
 	ValidationPipe
 } from '@nestjs/common'
-import { Auth } from '../auth/auth.decorator'
-import { CurrentUser } from '../auth/user.decorator'
+import { Auth } from '../auth/decorators/auth.decorator'
+import { CurrentUser } from '../auth/decorators/user.decorator'
 import { LogActiveDayDto } from './log-active-day.dto'
 import { LogActiveDayService } from './log-active-day.service'
 
@@ -31,5 +31,12 @@ export class LogActiveDayController {
 	@Auth()
 	async getStatistics(@CurrentUser('id') userId: number) {
 		return this.logActiveDayService.getStatistics(userId)
+	}
+
+	@HttpCode(200)
+	@Get('get-all-count')
+	@Auth('admin')
+	async getAllCount() {
+		return this.logActiveDayService.getAllSessionCount()
 	}
 }

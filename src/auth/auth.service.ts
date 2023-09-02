@@ -9,6 +9,7 @@ import { User } from '@prisma/client'
 import { hash, verify } from 'argon2'
 import { PrismaService } from 'src/prisma.service'
 import { AuthDto } from './auth.dto'
+import { RefreshTokenDto } from './refreshToken.dto'
 
 @Injectable()
 export class AuthService {
@@ -17,11 +18,11 @@ export class AuthService {
 	async login(dto: AuthDto) {
 		const user = await this.validateUser(dto)
 
-		// const tokens = await this.issueTokenPair(user.id)
+		const tokens = await this.issueTokenPair(user.id)
 
 		return {
 			user: this.returnUserFields(user),
-			accessToken: await this.issueTokenPair(user.id)
+			...tokens
 		}
 	}
 
@@ -39,42 +40,41 @@ export class AuthService {
 				options: {
 					create: {
 						sessionCount: 7,
-						breakDuration: 30,
-						flowDuration: 52
+						breakDuration: 300,
+						flowDuration: 900
 					}
 				}
 			}
 		})
 
-		// const tokens = await this.issueTokenPair(user.id)
+		const tokens = await this.issueTokenPair(user.id)
 
 		return {
 			user: this.returnUserFields(user),
-			accessToken: await this.issueTokenPair(user.id)
+			...tokens
 		}
 	}
 
-	// async getNewTokens(refreshToken: string) {
-	// 	if (!refreshToken)
-	// 		throw new UnauthorizedException('Пожалуйста, войдите в аккаунт')
+	async getNewTokens({ refreshToken }: RefreshTokenDto) {
+		if (!refreshToken)
+			throw new UnauthorizedException('Please, sign in to account')
 
-	// 	const result = await this.jwt.verifyAsync(refreshToken)
-	// 	if (!result)
-	// 		throw new UnauthorizedException('Невалидный токен или он истёк!')
+		const result = await this.jwt.verifyAsync(refreshToken)
+		if (!result) throw new UnauthorizedException('Invalid token or expired')
 
-	// 	const user = await this.prisma.user.findUnique({
-	// 		where: {
-	// 			id: result.id
-	// 		}
-	// 	})
+		const user = await this.prisma.user.findUnique({
+			where: {
+				id: result.id
+			}
+		})
 
-	// 	const tokens = await this.issueTokenPair(user.id)
+		const tokens = await this.issueTokenPair(user.id)
 
-	// 	return {
-	// 		user: this.returnUserFields(user),
-	// 		...tokens
-	// 	}
-	// }
+		return {
+			user: this.returnUserFields(user),
+			...tokens
+		}
+	}
 
 	async validateUser(dto: AuthDto): Promise<User> {
 		const user = await this.prisma.user.findUnique({
@@ -83,12 +83,11 @@ export class AuthService {
 			}
 		})
 
-		if (!user) throw new NotFoundException('Пользователь не найден!')
+		if (!user) throw new NotFoundException('User not found')
 
 		const isValidPassword = await verify(user.password, dto.password)
 
-		if (!isValidPassword)
-			throw new UnauthorizedException('Неправильный пароль!')
+		if (!isValidPassword) throw new UnauthorizedException('Invalid Password')
 
 		return user
 	}
@@ -96,21 +95,22 @@ export class AuthService {
 	async issueTokenPair(userId: number) {
 		const data = { id: userId }
 
-		// const refreshToken = await this.jwt.signAsync(data, {
-		// 	expiresIn: '15d'
-		// })
+		const refreshToken = await this.jwt.signAsync(data, {
+			expiresIn: '15d'
+		})
 
 		const accessToken = await this.jwt.signAsync(data, {
 			expiresIn: '91d'
 		})
 
-		return accessToken
+		return { accessToken, refreshToken }
 	}
 
 	returnUserFields(user: User) {
 		return {
 			id: user.id,
-			email: user.email
+			email: user.email,
+			isAdmin: user.isAdmin
 		}
 	}
 }
